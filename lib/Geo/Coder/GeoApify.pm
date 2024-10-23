@@ -25,10 +25,10 @@ our $VERSION = '0.01';
 
 =head1 SYNOPSIS
 
-      use Geo::Coder::GeoApify;
+    use Geo::Coder::GeoApify;
 
-      my $geo_coder = Geo::Coder::GeoApify->new();
-      my $location = $geo_coder->geocode(location => '10 Downing St., London, UK');
+    my $geo_coder = Geo::Coder::GeoApify->new(apiKey => $ENV{'GEOAPIFY_KEY'});
+    my $location = $geo_coder->geocode(location => '10 Downing St., London, UK');
 
 =head1 DESCRIPTION
 
@@ -72,7 +72,7 @@ sub new {
 	if(!defined($args{'host'})) {
 		$ua->ssl_opts(verify_hostname => 0);	# Yuck
 	}
-	my $host = delete $args{host} || 'https://api.geoapify.com/v1/geocode';
+	my $host = delete $args{host} || 'api.geoapify.com/v1/geocode';
 
 	return bless { ua => $ua, host => $host, apiKey => $args{'apiKey'} }, $class;
 }
@@ -172,7 +172,7 @@ sub ua {
 
 =head2 reverse_geocode
 
-    $location = $geo_coder->reverse_geocode(lat => '37.778907, lon => -122.39732');
+    $location = $geo_coder->reverse_geocode(lat => 37.778907, lon => -122.39732);
 
 Similar to geocode except it expects a latitude,longitude pair.
 
@@ -187,20 +187,18 @@ sub reverse_geocode {
 	} elsif(ref($_[0])) {
 		Carp::croak('Usage: geocode(location => $location)');
 		return;	# Not sure why this is needed, but t/carp.t fails without it
-	} elsif(@_ % 2 == 0) {
+	} elsif((@_ % 2) == 0) {
 		%param = @_;
-	} else {
-		$param{location} = shift;
 	}
 
 	my $lat = $param{lat}
-		or Carp::carp('Usage: reverse_geocode(latlng => $latlng)');
+		or Carp::carp('Usage: reverse_geocode(lat => $lat, lon => $lon');
 
 	my $lon = $param{lon}
-		or Carp::carp('Usage: reverse_geocode(latlng => $latlng)');
+		or Carp::carp('Usage: reverse_geocode(lat => $lat, lon => $lon');
 
 	my $uri = URI->new("https://$self->{host}/reverse");
-	my %query_parameters = ('lat' => $lat, 'lon' => 'lon', 'apiKey' => $self->{'apiKey'});
+	my %query_parameters = ('lat' => $lat, 'lon' => $lon, 'apiKey' => $self->{'apiKey'});
 	$uri->query_form(%query_parameters);
 	my $url = $uri->as_string();
 
