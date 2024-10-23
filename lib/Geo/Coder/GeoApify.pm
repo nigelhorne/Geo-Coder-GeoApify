@@ -81,8 +81,8 @@ sub new {
 
     $location = $geo_coder->geocode(location => $location);
 
-    print 'Latitude: ', $location->{'latt'}, "\n";
-    print 'Longitude: ', $location->{'longt'}, "\n";
+    print 'Latitude: ', $location->{'features'}[0]{'geometry'}{'coordinates'}[1], "\n";
+    print 'Longitude: ', $location->{'features'}[0]{'geometry'}{'coordinates'}[0], "\n";
 
     @locations = $geo_coder->geocode('Portland, USA');
     print 'There are Portlands in ', join (', ', map { $_->{'state'} } @locations), "\n";
@@ -172,7 +172,8 @@ sub ua {
 
 =head2 reverse_geocode
 
-    $location = $geo_coder->reverse_geocode(lat => 37.778907, lon => -122.39732);
+    my $address = $geo_coder->reverse_geocode(lat => 37.778907, lon => -122.39732);
+    print 'City: ', $address->{features}[0]->{'properties'}{'city'}, "\n";
 
 Similar to geocode except it expects a latitude,longitude pair.
 
