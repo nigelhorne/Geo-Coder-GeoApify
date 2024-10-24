@@ -43,42 +43,40 @@ a free Geo-Coding database covering many countries.
 
 =cut
 
-sub new {
+sub new
+{
 	my $class = shift;
+	# Handle hash or hashref arguments
 	my %args = (ref($_[0]) eq 'HASH') ? %{$_[0]} : @_;
 
-	# Use Geo::Coder::GeoApify->new(), not Geo::Coder::GeoApify::new()
-	if(!defined($class)) {
-		carp(__PACKAGE__, ' use ->new() not ::new() to instantiate');
+	# Ensure the correct instantiation method is used
+	unless (defined $class) {
+		carp(__PACKAGE__, ' Use ->new() not ::new() to instantiate');
 		return;
 	}
 
-	if(ref($class)) {
-		# clone the given object
-		return bless { %{$class}, %args }, ref($class);
-	}
+	# If $class is an object, clone it with new arguments
+	return bless { %{$class}, %args }, ref($class) if ref($class);
 
+	# Validate that the apiKey is provided and is a scalar
 	my $apiKey = $args{'apiKey'};
-	if(!defined($apiKey)) {
-		carp(__PACKAGE__, ' apiKey not given');
-		return;
-	}
-	if(ref($apiKey)) {
-		carp(__PACKAGE__, ' apiKey must be a scalar');
+	unless (defined $apiKey && !ref($apiKey)) {
+		carp(__PACKAGE__, defined $apiKey ? ' apiKey must be a scalar' : ' apiKey not given');
 		return;
 	}
 
-	my $ua = $args{ua};
-	if(!defined($ua)) {
-		$ua = LWP::UserAgent->new(agent => __PACKAGE__ . "/$VERSION");
-		$ua->default_header(accept_encoding => 'gzip,deflate');
-	}
-	if(!defined($args{'host'})) {
-		$ua->ssl_opts(verify_hostname => 0);	# Yuck
-	}
-	my $host = delete $args{host} || 'api.geoapify.com/v1/geocode';
+	# Set up user agent (ua) if not provided
+	my $ua = $args{'ua'} // LWP::UserAgent->new(agent => __PACKAGE__ . "/$VERSION");
+	$ua->default_header(accept_encoding => 'gzip,deflate');
 
-	return bless { ua => $ua, host => $host, apiKey => $args{'apiKey'} }, $class;
+	# Disable SSL verification if host not defined (not recommended in production)
+	$ua->ssl_opts(verify_hostname => 0) unless defined $args{'host'};
+
+	# Set host, defaulting to 'api.geoapify.com/v1/geocode'
+	my $host = $args{'host'} // 'api.geoapify.com/v1/geocode';
+
+	# Return the blessed object
+	return bless { ua => $ua, host => $host, apiKey => $apiKey }, $class;
 }
 
 =head2 geocode
@@ -93,56 +91,60 @@ sub new {
 
 =cut
 
-sub geocode {
+sub geocode
+{
 	my $self = shift;
 	my %param;
 
-	if(ref($_[0]) eq 'HASH') {
+	# Handle different types of input
+	if(ref $_[0] eq 'HASH') {
 		%param = %{$_[0]};
-	} elsif(ref($_[0])) {
+	} elsif(ref $_[0]) {
 		Carp::croak('Usage: geocode(location => $location)');
-		return;	# Not sure why this is needed, but t/carp.t fails without it
-	} elsif(@_ % 2 == 0) {
+		return;	# Required for t/carp.t test case
+	} elsif((@_ % 2) == 0) {
 		%param = @_;
 	} else {
 		$param{location} = shift;
 	}
 
-	my $location = $param{location}
+	# Ensure location is provided
+	my $location = $param{location} 
 		or Carp::croak('Usage: geocode(location => $location)');
 
-	if (Encode::is_utf8($location)) {
-		$location = Encode::encode_utf8($location);
-	}
+	# Encode location if it's in UTF-8
+	$location = Encode::encode_utf8($location) if Encode::is_utf8($location);
 
+	# Create URI for the API request
 	my $uri = URI->new("https://$self->{host}/search");
-	if($location =~ /(.+),\s*England$/i) {
-		$location = "$1, United Kingdom";	# Avoid confusion between England and New England
-	}
+
+	# Handle potential confusion between England and New England
+	$location =~ s/(.+),\s*England$/$1, United Kingdom/i;
+
+	# Replace spaces with plus signs for URL encoding
 	$location =~ s/\s/+/g;
-	my %query_parameters = ('text' => $location, 'apiKey' => $self->{'apiKey'});
-	$uri->query_form(%query_parameters);
+
+	# Set query parameters
+	$uri->query_form('text' => $location, 'apiKey' => $self->{'apiKey'});
 	my $url = $uri->as_string();
 
+	# Send the request and handle response
 	my $res = $self->{ua}->get($url);
 
-	if ($res->is_error) {
-		Carp::carp("API returned error: on $url ", $res->status_line());
-		return { };
+	if($res->is_error) {
+		Carp::carp("API returned error on $url: ", $res->status_line());
+		return {};
 	}
 
-	my $json = JSON::MaybeXS->new()->utf8();
+	# Decode the JSON response
+	my $json = JSON::MaybeXS->new->utf8();
 	my $rc;
 	eval {
 		$rc = $json->decode($res->decoded_content());
 	};
-	if(!defined($rc)) {
-		if($@) {
-			Carp::carp("$url: $@");
-			return { };
-		}
-		Carp::carp("$url: can't decode the JSON ", $res->content());
-		return { };
+	if($@ || !defined $rc) {
+		Carp::carp("$url: Failed to decode JSON - ", $@ || $res->content());
+		return {};
 	}
 
 	return $rc;
@@ -170,10 +172,12 @@ You can also set your own User-Agent object:
 sub ua
 {
 	my $self = shift;
-	if (@_) {
-		$self->{ua} = shift;
-	}
-	$self->{ua};
+
+	# Update 'ua' if an argument is provided
+	$self->{ua} = shift if @_;
+
+	# Return the 'ua' value
+	return $self->{ua};
 }
 
 =head2 reverse_geocode
@@ -185,53 +189,61 @@ Similar to geocode except it expects a latitude,longitude pair.
 
 =cut
 
-sub reverse_geocode {
+sub reverse_geocode
+{
 	my $self = shift;
 	my %param;
 
-	if(ref($_[0]) eq 'HASH') {
+	# Handle input: accept either hash or hashref
+	if(ref $_[0] eq 'HASH') {
 		%param = %{$_[0]};
-	} elsif(ref($_[0])) {
-		Carp::croak('Usage: geocode(location => $location)');
-		return;	# Not sure why this is needed, but t/carp.t fails without it
+	} elsif(ref $_[0]) {
+		Carp::croak('Usage: reverse_geocode(lat => $lat, lon => $lon)');
+		return;	# Required for t/carp.t test case
 	} elsif((@_ % 2) == 0) {
 		%param = @_;
 	}
 
-	my $lat = $param{lat}
-		or Carp::carp('Usage: reverse_geocode(lat => $lat, lon => $lon');
+	# Validate latitude and longitude
+	my $lat = $param{lat} or Carp::carp('Missing latitude (lat)');
+	my $lon = $param{lon} or Carp::carp('Missing longitude (lon)');
 
-	my $lon = $param{lon}
-		or Carp::carp('Usage: reverse_geocode(lat => $lat, lon => $lon');
+	return {} unless $lat && $lon;	# Return early if lat or lon is missing
 
+	# Build URI for the API request
 	my $uri = URI->new("https://$self->{host}/reverse");
-	my %query_parameters = ('lat' => $lat, 'lon' => $lon, 'apiKey' => $self->{'apiKey'});
-	$uri->query_form(%query_parameters);
+	$uri->query_form(
+		'lat'	=> $lat,
+		'lon'	=> $lon,
+		'apiKey' => $self->{'apiKey'}
+	);
 	my $url = $uri->as_string();
 
+	# Send request to the API
 	my $res = $self->{ua}->get($url);
 
-	if ($res->is_error) {
-		Carp::carp("API returned error: on $url ", $res->status_line());
-		return { };
+	# Handle API errors
+	if($res->is_error) {
+		Carp::carp("API returned error on $url: ", $res->status_line());
+		return {};
 	}
 
-	my $json = JSON::MaybeXS->new()->utf8();
+	# Decode the JSON response
+	my $json = JSON::MaybeXS->new->utf8();
 	my $rc;
 	eval {
 		$rc = $json->decode($res->decoded_content());
 	};
-	if(!defined($rc)) {
-		if($@) {
-			Carp::carp("$url: $@");
-			return { };
-		}
-		Carp::carp("$url: can't decode the JSON ", $res->content());
-		return { };
+
+	# Handle JSON decoding errors
+	if($@ || !defined $rc) {
+		Carp::carp("$url: Failed to decode JSON - ", $@ || $res->content());
+		return {};
 	}
 
 	return $rc;
 }
+
 
 =head1 AUTHOR
 
