@@ -39,7 +39,7 @@ a free Geo-Coding database covering many countries.
 
 =head2 new
 
-    $geo_coder = Geo::Coder::GeoApify->new(apiKey => 'foo');
+    $geo_coder = Geo::Coder::GeoApify->new(apiKey => $ENV{'GEOAPIFY_KEY'});
 
 =cut
 
@@ -61,6 +61,10 @@ sub new {
 	my $apiKey = $args{'apiKey'};
 	if(!defined($apiKey)) {
 		carp(__PACKAGE__, ' apiKey not given');
+		return;
+	}
+	if(ref($apiKey)) {
+		carp(__PACKAGE__, ' apiKey must be a scalar');
 		return;
 	}
 
@@ -156,13 +160,15 @@ You can also set your own User-Agent object:
 
     use LWP::UserAgent::Throttled;
 
-    my $ua = LWP::UserAgent::Throttled->new({ 'api.geoapify.com' => 2 });
+    my $ua = LWP::UserAgent::Throttled->new();
+    $ua->throttle({ 'api.geoapify.com' => 5 });
     $ua->env_proxy(1);
-    $geo_coder = Geo::Coder::GeoApify->new({ ua => $ua, apiKey => 'foo' });
+    $geo_coder = Geo::Coder::GeoApify->new({ ua => $ua, apiKey => $ENV{'GEOAPIFY_KEY'} });
 
 =cut
 
-sub ua {
+sub ua
+{
 	my $self = shift;
 	if (@_) {
 		$self->{ua} = shift;

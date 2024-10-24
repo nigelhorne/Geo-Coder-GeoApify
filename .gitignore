@@ -33,3 +33,6 @@ inc/
 /MANIFEST.bak
 /pm_to_blib
 /*.zip
+*.swp
+.DS_Store
+t/online.enabled

@@ -2,8 +2,10 @@
 
 use warnings;
 use strict;
+
 use Test::Most tests => 6;
 use Test::NoWarnings;
+use Test::RequiresInternet('api.geoapify.com' => 443);
 
 BEGIN {
 	use_ok('Geo::Coder::GeoApify');
