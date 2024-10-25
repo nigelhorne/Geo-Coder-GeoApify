@@ -110,7 +110,7 @@ sub geocode
 	}
 
 	# Ensure location is provided
-	my $location = $param{location} 
+	my $location = $param{location}
 		or Carp::croak('Usage: geocode(location => $location)');
 
 	# Encode location if it's in UTF-8

@@ -3,15 +3,15 @@
 use warnings;
 use strict;
 
-use Test::Most tests => 6;
+use Test::Most;
+use Test::RequiresInternet('api.geoapify.com' => 'https');	# Must come before T::NoWarnings
+use Test::Needs 'Test::Number::Delta';
 use Test::NoWarnings;
-use Test::RequiresInternet('api.geoapify.com' => 443);
-
-BEGIN {
-	use_ok('Geo::Coder::GeoApify');
-}
 
 GEOAPIFY: {
+	plan tests => 6;
+	use_ok('Geo::Coder::GeoApify');
+
 	SKIP: {
 		if(!-e 't/online.enabled') {
 			diag('Online tests disabled');
@@ -24,16 +24,7 @@ GEOAPIFY: {
 			skip('Set GEOAPIFY_KEY variable to your API key', 4);
 		}
 
-		eval {
-			require Test::Number::Delta;
-
-			Test::Number::Delta->import();
-		};
-
-		if($@) {
-			diag('Test::Number::Delta not installed - skipping tests');
-			skip('Test::Number::Delta not installed', 4);
-		}
+		Test::Number::Delta->import();
 
 		my $ua;
 
