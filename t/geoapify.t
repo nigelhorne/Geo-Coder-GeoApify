@@ -60,7 +60,9 @@ GEOAPIFY: {
 		delta_within($location->{'features'}[0]{'geometry'}{'coordinates'}[0], -65.4, 1e-1);	# Longitude
 
 		my $address = $geocoder->reverse_geocode(lon => -64.87, lat => 46.67);
-		# diag(Data::Dumper->new([$address])->Dump());
+		if($ENV{'TEST_VERBOSE'}) {
+			diag(Data::Dumper->new([$address])->Dump());
+		}
 		like($address->{features}[0]->{'properties'}{'city'}, qr/Richibucto/i, 'test reverse');
 	}
 }

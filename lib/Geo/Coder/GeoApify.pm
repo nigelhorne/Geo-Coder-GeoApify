@@ -46,6 +46,7 @@ a free Geo-Coding database covering many countries.
 sub new
 {
 	my $class = shift;
+
 	# Handle hash or hashref arguments
 	my %args = (ref($_[0]) eq 'HASH') ? %{$_[0]} : @_;
 
