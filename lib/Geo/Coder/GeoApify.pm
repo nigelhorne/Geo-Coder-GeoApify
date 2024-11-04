@@ -70,7 +70,7 @@ sub new
 	my $ua = $args{'ua'} // LWP::UserAgent->new(agent => __PACKAGE__ . "/$VERSION");
 	$ua->default_header(accept_encoding => 'gzip,deflate');
 
-	# Disable SSL verification if host not defined (not recommended in production)
+	# Disable SSL verification if the host is not defined (not recommended in production)
 	$ua->ssl_opts(verify_hostname => 0) unless defined $args{'host'};
 
 	# Set host, defaulting to 'api.geoapify.com/v1/geocode'
@@ -244,7 +244,6 @@ sub reverse_geocode
 
 	return $rc;
 }
-
 
 =head1 AUTHOR
 
