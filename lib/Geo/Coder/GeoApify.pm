@@ -96,23 +96,29 @@ sub new
 sub geocode
 {
 	my $self = shift;
-	my %param;
+	my %params;
 
 	# Handle different types of input
 	if(ref $_[0] eq 'HASH') {
-		%param = %{$_[0]};
+		%params = %{$_[0]};
 	} elsif(ref $_[0]) {
 		Carp::croak('Usage: geocode(location => $location)');
 		return;	# Required for t/carp.t test case
 	} elsif((@_ % 2) == 0) {
-		%param = @_;
+		%params = @_;
 	} else {
-		$param{location} = shift;
+		$params{location} = shift;
 	}
 
 	# Ensure location is provided
-	my $location = $param{location}
+	my $location = $params{location}
 		or Carp::croak('Usage: geocode(location => $location)');
+
+	# Fail when the input is just a set of numbers
+	if($params{'location'} !~ /\D/) {
+		Carp::croak('Usage: ', __PACKAGE__, ": invalid input to geocode(), $params{location}");
+		return;
+	}
 
 	# Encode location if it's in UTF-8
 	$location = Encode::encode_utf8($location) if Encode::is_utf8($location);
@@ -133,7 +139,7 @@ sub geocode
 	# Send the request and handle response
 	my $res = $self->{ua}->get($url);
 
-	if($res->is_error) {
+	if($res->is_error()) {
 		Carp::carp("API returned error on $url: ", $res->status_line());
 		return {};
 	}
@@ -194,21 +200,21 @@ Similar to geocode except it expects a latitude,longitude pair.
 sub reverse_geocode
 {
 	my $self = shift;
-	my %param;
+	my %params;
 
 	# Handle input: accept either hash or hashref
 	if(ref $_[0] eq 'HASH') {
-		%param = %{$_[0]};
+		%params = %{$_[0]};
 	} elsif(ref $_[0]) {
 		Carp::croak('Usage: reverse_geocode(lat => $lat, lon => $lon)');
 		return;	# Required for t/carp.t test case
 	} elsif((@_ % 2) == 0) {
-		%param = @_;
+		%params = @_;
 	}
 
 	# Validate latitude and longitude
-	my $lat = $param{lat} or Carp::carp('Missing latitude (lat)');
-	my $lon = $param{lon} or Carp::carp('Missing longitude (lon)');
+	my $lat = $params{lat} or Carp::carp('Missing latitude (lat)');
+	my $lon = $params{lon} or Carp::carp('Missing longitude (lon)');
 
 	return {} unless $lat && $lon;	# Return early if lat or lon is missing
 

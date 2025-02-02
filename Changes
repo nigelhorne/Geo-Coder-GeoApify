@@ -2,6 +2,8 @@ Revision history for Geo-Coder-GeoApify
 
 0.02
 	Commented the code better
+	geocode(): croak when input is just a set of numbers
+	Added t/offline.t
 
 0.01	Wed Oct 23 13:11:50 EDT 2024
         First draft

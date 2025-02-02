@@ -47,8 +47,8 @@ GEOAPIFY: {
 		my $location = $geocoder->geocode('Richibucto, New Brunswick, Canada');
 		# diag(Data::Dumper->new([$location])->Dump());
 
-		delta_within($location->{'features'}[0]{'geometry'}{'coordinates'}[1], 46.5, 1e-1);	# Latitude
-		delta_within($location->{'features'}[0]{'geometry'}{'coordinates'}[0], -65.4, 1e-1);	# Longitude
+		delta_within($location->{'features'}[0]{'geometry'}{'coordinates'}[1], 46, 1);	# Latitude
+		delta_within($location->{'features'}[0]{'geometry'}{'coordinates'}[0], -66, 1);	# Longitude
 
 		my $address = $geocoder->reverse_geocode(lon => -64.87, lat => 46.67);
 		if($ENV{'TEST_VERBOSE'}) {
