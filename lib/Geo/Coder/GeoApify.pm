@@ -363,7 +363,7 @@ L<Geo::Coder::GooglePlaces>, L<HTML::GoogleMaps::V3>
 
 =head1 LICENSE AND COPYRIGHT
 
-Copyright 2024 Nigel Horne.
+Copyright 2024-2025 Nigel Horne.
 
 This program is released under the following licence: GPL2
 
