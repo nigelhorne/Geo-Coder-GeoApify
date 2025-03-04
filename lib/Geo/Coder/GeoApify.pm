@@ -20,11 +20,11 @@ Geo::Coder::GeoApify - Provides a Geo-Coding functionality using L<https://www.g
 
 =head1 VERSION
 
-Version 0.01
+Version 0.02
 
 =cut
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 =head1 SYNOPSIS
 
