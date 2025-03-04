@@ -11,6 +11,7 @@ use HTTP::Request;
 use LWP::UserAgent;
 use LWP::Protocol::https;
 use Params::Get;
+use Params::Validate::Strict;
 use Time::HiRes;
 use URI;
 
@@ -287,13 +288,24 @@ Similar to geocode except it expects a latitude,longitude pair.
 sub reverse_geocode
 {
 	my $self = shift;
-	my $params = Params::Get::get_params(undef, @_);
 
-	# Validate latitude and longitude
-	my $lat = $params->{lat} or Carp::carp('Missing latitude (lat)');
-	my $lon = $params->{lon} or Carp::carp('Missing longitude (lon)');
+        my $params = Params::Validate::Strict::validate_strict({
+            args => Params::Get::get_params(undef, @_),
+            schema => {
+                'lat' => {
+                    type => 'number',
+                    min => -180,
+                    max => 180
+                }, 'lon' => {
+                    type => 'number',
+                    min => -180,
+                    max => 180
+                }
+            }
+        });
 
-	return {} unless $lat && $lon;	# Return early if lat or lon is missing
+	my $lat = $params->{'lat'};
+	my $lon = $params->{'lon'};
 
 	# Build URI for the API request
 	my $uri = URI->new("https://$self->{host}/reverse");
