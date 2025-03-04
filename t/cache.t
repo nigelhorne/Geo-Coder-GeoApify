@@ -39,13 +39,6 @@ BEGIN { use_ok('Geo::Coder::GeoApify') }
 	@MyTestUA::REQUEST_TIMES = ();
 }
 
-# Get the API Key
-my $apiKey = $ENV{'GEOAPIFY_KEY'};
-if((!defined($apiKey)) || (length($apiKey) == 0)) {
-	diag('Set GEOAPIFY_KEY variable to your API key');
-	skip('Set GEOAPIFY_KEY variable to your API key', 4);
-}
-
 # --- Create a Geo::Coder::GeoApify object with caching and rate limiting ---
 
 # Set a short minimum interval for testing purposes (e.g. 1 second)
@@ -64,7 +57,7 @@ my $ua = MyTestUA->new();
 
 # Instantiate the geocoder with our custom UA, cache, and min_interval
 my $geo = Geo::Coder::GeoApify->new(
-	apiKey => $apiKey,
+	apiKey => 'dummy',	# This makes no actual calls so we don't need a key
 	ua => $ua,
 	cache => $cache,
 	min_interval => $min_interval,
