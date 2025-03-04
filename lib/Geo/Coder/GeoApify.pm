@@ -4,11 +4,14 @@ use strict;
 use warnings;
 
 use Carp;
+use CHI;
 use Encode;
 use JSON::MaybeXS;
 use HTTP::Request;
 use LWP::UserAgent;
 use LWP::Protocol::https;
+use Params::Get;
+use Time::HiRes;
 use URI;
 
 =head1 NAME
@@ -35,11 +38,70 @@ our $VERSION = '0.01';
 Geo::Coder::GeoApify provides an interface to https://www.geoapify.com/maps-api/,
 a free Geo-Coding database covering many countries.
 
+=over 4
+
+=item * Caching
+
+Identical geocode requests are cached (using L<CHI> or a user-supplied caching object),
+reducing the number of HTTP requests to the API and speeding up repeated queries.
+
+This module leverages L<CHI> for caching geocoding responses.
+When a geocode request is made,
+a cache key is constructed from the request.
+If a cached response exists,
+it is returned immediately,
+avoiding unnecessary API calls.
+
+=item * Rate-Limiting
+
+A minimum interval between successive API calls can be enforced to ensure that the API is not overwhelmed and to comply with any request throttling requirements.
+
+Rate-limiting is implemented using L<Time::HiRes>.
+A minimum interval between API
+calls can be specified via the C<min_interval> parameter in the constructor.
+Before making an API call,
+the module checks how much time has elapsed since the
+last request and,
+if necessary,
+sleeps for the remaining time.
+
+=back
+
 =head1 METHODS
 
 =head2 new
 
     $geo_coder = Geo::Coder::GeoApify->new(apiKey => $ENV{'GEOAPIFY_KEY'});
+
+Creates a new C<Geo::Coder::GeoApify> object with the provided apiKey.
+
+It takes several optional parameters:
+
+=over 4
+
+=item * C<cache>
+
+A caching object.
+If not provided,
+an in-memory cache is created with a default expiration of one hour.
+
+=item * C<host>
+
+The API host endpoint.
+Defaults to L<https://api.geoapify.com/v1/geocode>.
+
+=item * C<min_interval>
+
+Minimum number of seconds to wait between API requests.
+Defaults to C<0> (no delay).
+Use this option to enforce rate-limiting.
+
+=item * C<ua>
+
+An object to use for HTTP requests.
+If not provided, a default user agent is created.
+
+=back
 
 =cut
 
@@ -77,8 +139,26 @@ sub new
 	# Set host, defaulting to 'api.geoapify.com/v1/geocode'
 	my $host = $args{'host'} // 'api.geoapify.com/v1/geocode';
 
+	# Set up caching (default to an in-memory cache if none provided)
+	my $cache = $args{cache} || CHI->new(
+		driver => 'Memory',
+		global => 1,
+		expires_in => '1 day',
+	);
+
+	# Set up rate-limiting: minimum interval between requests (in seconds)
+	my $min_interval = $args{min_interval} || 0;	# default: no delay
+
 	# Return the blessed object
-	return bless { ua => $ua, host => $host, apiKey => $apiKey }, $class;
+	return bless {
+		apiKey => $apiKey,
+		cache => $cache,
+		host => $host,
+		min_interval => $min_interval,
+		last_request => 0,	# Initialize last_request timestamp
+		ua => $ua,
+		%args
+	}, $class;
 }
 
 =head2 geocode
@@ -96,27 +176,15 @@ sub new
 sub geocode
 {
 	my $self = shift;
-	my %params;
-
-	# Handle different types of input
-	if(ref $_[0] eq 'HASH') {
-		%params = %{$_[0]};
-	} elsif(ref $_[0]) {
-		Carp::croak('Usage: geocode(location => $location)');
-		return;	# Required for t/carp.t test case
-	} elsif((@_ % 2) == 0) {
-		%params = @_;
-	} else {
-		$params{location} = shift;
-	}
+	my $params = Params::Get::get_params('location', @_);
 
 	# Ensure location is provided
-	my $location = $params{location}
+	my $location = $params->{location}
 		or Carp::croak('Usage: geocode(location => $location)');
 
 	# Fail when the input is just a set of numbers
-	if($params{'location'} !~ /\D/) {
-		Carp::croak('Usage: ', __PACKAGE__, ": invalid input to geocode(), $params{location}");
+	if($location !~ /\D/) {
+		Carp::croak('Usage: ', __PACKAGE__, ": invalid input to geocode(), $location");
 		return;
 	}
 
@@ -136,8 +204,24 @@ sub geocode
 	$uri->query_form('text' => $location, 'apiKey' => $self->{'apiKey'});
 	my $url = $uri->as_string();
 
+	# Create a cache key based on the location (might want to use a stronger hash function if needed)
+	my $cache_key = "apify:$location";
+	if(my $cached = $self->{cache}->get($cache_key)) {
+		return $cached;
+	}
+
+	# Enforce rate-limiting: ensure at least min_interval seconds between requests.
+	my $now = time();
+	my $elapsed = $now - $self->{last_request};
+	if($elapsed < $self->{min_interval}) {
+		Time::HiRes::sleep($self->{min_interval} - $elapsed);
+	}
+
 	# Send the request and handle response
 	my $res = $self->{ua}->get($url);
+
+	# Update last_request timestamp
+	$self->{'last_request'} = time();
 
 	if($res->is_error()) {
 		Carp::carp("API returned error on $url: ", $res->status_line());
@@ -154,6 +238,9 @@ sub geocode
 		Carp::carp("$url: Failed to decode JSON - ", $@ || $res->content());
 		return {};
 	}
+
+	# Cache the result before returning it
+	$self->{'cache'}->set($cache_key, $rc);
 
 	return $rc;
 }
@@ -200,21 +287,11 @@ Similar to geocode except it expects a latitude,longitude pair.
 sub reverse_geocode
 {
 	my $self = shift;
-	my %params;
-
-	# Handle input: accept either hash or hashref
-	if(ref $_[0] eq 'HASH') {
-		%params = %{$_[0]};
-	} elsif(ref $_[0]) {
-		Carp::croak('Usage: reverse_geocode(lat => $lat, lon => $lon)');
-		return;	# Required for t/carp.t test case
-	} elsif((@_ % 2) == 0) {
-		%params = @_;
-	}
+	my $params = Params::Get::get_params(undef, @_);
 
 	# Validate latitude and longitude
-	my $lat = $params{lat} or Carp::carp('Missing latitude (lat)');
-	my $lon = $params{lon} or Carp::carp('Missing longitude (lon)');
+	my $lat = $params->{lat} or Carp::carp('Missing latitude (lat)');
+	my $lon = $params->{lon} or Carp::carp('Missing longitude (lon)');
 
 	return {} unless $lat && $lon;	# Return early if lat or lon is missing
 
@@ -227,8 +304,24 @@ sub reverse_geocode
 	);
 	my $url = $uri->as_string();
 
+	# Create a cache key based on the location (might want to use a stronger hash function if needed)
+	my $cache_key = "apify:reverse:$lat:$lon";
+	if(my $cached = $self->{cache}->get($cache_key)) {
+		return $cached;
+	}
+
+	# Enforce rate-limiting: ensure at least min_interval seconds between requests.
+	my $now = time();
+	my $elapsed = $now - $self->{last_request};
+	if($elapsed < $self->{min_interval}) {
+		Time::HiRes::sleep($self->{min_interval} - $elapsed);
+	}
+
 	# Send request to the API
 	my $res = $self->{ua}->get($url);
+
+	# Update last_request timestamp
+	$self->{'last_request'} = time();
 
 	# Handle API errors
 	if($res->is_error) {
@@ -248,6 +341,9 @@ sub reverse_geocode
 		Carp::carp("$url: Failed to decode JSON - ", $@ || $res->content());
 		return {};
 	}
+
+	# Cache the result before returning it
+	$self->{'cache'}->set($cache_key, $rc);
 
 	return $rc;
 }
