@@ -10,7 +10,7 @@ use JSON::MaybeXS;
 use HTTP::Request;
 use LWP::UserAgent;
 use LWP::Protocol::https;
-use Params::Get;
+use Params::Get 0.04;
 use Params::Validate::Strict;
 use Time::HiRes;
 use URI;

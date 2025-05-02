@@ -68,7 +68,7 @@ WriteMakefile(
 	'HTTP::Request' => 0,
 	'LWP::UserAgent' => 0,
 	'LWP::Protocol::https' => 0,
-	'Params::Get' => 0,
+	'Params::Get' => 0.04,
 	'Params::Validate::Strict' => 0,
 	'Time::HiRes' => 0,
 	'URI' => 0,
