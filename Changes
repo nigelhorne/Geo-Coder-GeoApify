@@ -2,6 +2,7 @@ Revision history for Geo-Coder-GeoApify
 
 0.03
 	Use Params::Validate::Strict
+	Remove duplicated code
 
 0.02	Tue Mar  4 08:34:49 EST 2025
 	Commented the code better

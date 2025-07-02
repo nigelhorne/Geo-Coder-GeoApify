@@ -211,42 +211,10 @@ sub geocode
 		return $cached;
 	}
 
-	# Enforce rate-limiting: ensure at least min_interval seconds between requests.
-	my $now = time();
-	my $elapsed = $now - $self->{last_request};
-	if($elapsed < $self->{min_interval}) {
-		Time::HiRes::sleep($self->{min_interval} - $elapsed);
+	if(my $rc = $self->_get_result($url)) {
+		# Cache the result before returning it
+		return $self->{'cache'}->set($cache_key, $rc);
 	}
-
-	# Send the request and handle response
-	my $res = $self->{ua}->get($url);
-
-	# Update last_request timestamp
-	$self->{'last_request'} = time();
-
-	# Handle API errors
-	if($res->is_error()) {
-		Carp::carp("API returned error on $url: ", $res->status_line());
-		return {};
-	}
-
-	# Decode the JSON response
-	my $json = JSON::MaybeXS->new->utf8();
-	my $rc;
-	eval {
-		$rc = $json->decode($res->decoded_content());
-	};
-
-	# Handle JSON decoding errors
-	if($@ || !defined $rc) {
-		Carp::carp("$url: Failed to decode JSON - ", $@ || $res->content());
-		return {};
-	}
-
-	# Cache the result before returning it
-	$self->{'cache'}->set($cache_key, $rc);
-
-	return $rc;
 }
 
 =head2 ua
@@ -332,6 +300,24 @@ sub reverse_geocode
 		Time::HiRes::sleep($self->{min_interval} - $elapsed);
 	}
 
+	if(my $rc = $self->_get_result($url)) {
+		# Cache the result before returning it
+		return $self->{'cache'}->set($cache_key, $rc);
+	}
+}
+
+# Connect to the API and get results
+sub _get_result
+{
+	my ($self, $url) = @_;
+
+	# Enforce rate-limiting: ensure at least min_interval seconds between requests.
+	my $now = time();
+	my $elapsed = $now - $self->{last_request};
+	if($elapsed < $self->{min_interval}) {
+		Time::HiRes::sleep($self->{min_interval} - $elapsed);
+	}
+
 	# Send the request and handle response
 	my $res = $self->{ua}->get($url);
 
@@ -354,11 +340,8 @@ sub reverse_geocode
 	# Handle JSON decoding errors
 	if($@ || !defined $rc) {
 		Carp::carp("$url: Failed to decode JSON - ", $@ || $res->content());
-		return {};
+		return;
 	}
-
-	# Cache the result before returning it
-	$self->{'cache'}->set($cache_key, $rc);
 
 	return $rc;
 }
