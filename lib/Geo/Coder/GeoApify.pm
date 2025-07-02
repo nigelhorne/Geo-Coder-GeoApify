@@ -224,6 +224,7 @@ sub geocode
 	# Update last_request timestamp
 	$self->{'last_request'} = time();
 
+	# Handle API errors
 	if($res->is_error()) {
 		Carp::carp("API returned error on $url: ", $res->status_line());
 		return {};
@@ -235,6 +236,8 @@ sub geocode
 	eval {
 		$rc = $json->decode($res->decoded_content());
 	};
+
+	# Handle JSON decoding errors
 	if($@ || !defined $rc) {
 		Carp::carp("$url: Failed to decode JSON - ", $@ || $res->content());
 		return {};
@@ -329,14 +332,14 @@ sub reverse_geocode
 		Time::HiRes::sleep($self->{min_interval} - $elapsed);
 	}
 
-	# Send request to the API
+	# Send the request and handle response
 	my $res = $self->{ua}->get($url);
 
 	# Update last_request timestamp
 	$self->{'last_request'} = time();
 
 	# Handle API errors
-	if($res->is_error) {
+	if($res->is_error()) {
 		Carp::carp("API returned error on $url: ", $res->status_line());
 		return {};
 	}
