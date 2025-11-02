@@ -36,7 +36,7 @@ our $VERSION = '0.02';
 
 =head1 DESCRIPTION
 
-Geo::Coder::GeoApify provides an interface to https://www.geoapify.com/maps-api/,
+Geo::Coder::GeoApify provides an interface to L<https://www.geoapify.com/maps-api/>,
 a free Geo-Coding database covering many countries.
 
 =over 4
@@ -265,8 +265,8 @@ sub reverse_geocode
             schema => {
                 'lat' => {
                     type => 'number',
-                    min => -180,
-                    max => 180
+                    min => -90,
+                    max => 90
                 }, 'lon' => {
                     type => 'number',
                     min => -180,
