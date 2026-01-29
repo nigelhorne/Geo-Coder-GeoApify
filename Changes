@@ -4,6 +4,7 @@ Revision history for Geo-Coder-GeoApify
 	Use Params::Validate::Strict
 	Remove duplicated code
 	Fixed maximum latitude
+	Fix https://www.cpantesters.org/cpan/report/70dda226-f93a-11ef-9e6e-7e2e6e8775ea
 
 0.02	Tue Mar  4 08:34:49 EST 2025
 	Commented the code better

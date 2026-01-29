@@ -130,7 +130,7 @@ sub new
 	}
 
 	# Set up user agent (ua) if not provided
-	my $ua = $args{'ua'} // LWP::UserAgent->new(agent => __PACKAGE__ . "/$VERSION");
+	my $ua = $args{'ua'} || LWP::UserAgent->new(agent => __PACKAGE__ . "/$VERSION");
 	$ua->default_header(accept_encoding => 'gzip,deflate');
 	$ua->env_proxy(1);
 
@@ -348,7 +348,7 @@ sub _get_result
 
 =head1 AUTHOR
 
-Nigel Horne, C<< <njh at bandsman.co.uk> >>
+Nigel Horne, C<< <njh at nigelhorne.com> >>
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.
@@ -361,7 +361,7 @@ L<Geo::Coder::GooglePlaces>, L<HTML::GoogleMaps::V3>
 
 =head1 LICENSE AND COPYRIGHT
 
-Copyright 2024-2025 Nigel Horne.
+Copyright 2024-2026 Nigel Horne.
 
 This program is released under the following licence: GPL2
 
