@@ -1,5 +1,4 @@
 Changes
-cpanfile
 lib/Geo/Coder/GeoApify.pm
 LICENSE
 Makefile.PL
