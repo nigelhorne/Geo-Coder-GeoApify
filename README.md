@@ -15,7 +15,7 @@ Version 0.02
 
 # DESCRIPTION
 
-Geo::Coder::GeoApify provides an interface to https://www.geoapify.com/maps-api/,
+Geo::Coder::GeoApify provides an interface to [https://www.geoapify.com/maps-api/](https://www.geoapify.com/maps-api/),
 a free Geo-Coding database covering many countries.
 
 - Caching
@@ -111,7 +111,7 @@ Similar to geocode except it expects a latitude,longitude pair.
 
 # AUTHOR
 
-Nigel Horne, `<njh at bandsman.co.uk>`
+Nigel Horne, `<njh at nigelhorne.com>`
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.
@@ -124,6 +124,6 @@ Lots of thanks to the folks at geoapify.com
 
 # LICENSE AND COPYRIGHT
 
-Copyright 2024 Nigel Horne.
+Copyright 2024-2026 Nigel Horne.
 
 This program is released under the following licence: GPL2
